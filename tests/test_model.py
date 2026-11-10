@@ -166,5 +166,54 @@ class TestStorageComparison(unittest.TestCase):
         self.assertAlmostEqual(bat["energy_wh"], 48 * 20, delta=1.0)
 
 
+class TestCrankAlternator(unittest.TestCase):
+    def setUp(self):
+        self.comp = model.load_components()
+
+    def test_chain_reference_has_zero_penalty(self):
+        # A serial path as good as a chain must cost nothing extra.
+        self.assertAlmostEqual(model.battery_penalty_pct(100, 0.97, 250), 0.0, places=6)
+
+    def test_worse_efficiency_costs_more_battery(self):
+        a = model.battery_penalty_pct(100, 0.85, 250)
+        b = model.battery_penalty_pct(100, 0.70, 250)
+        self.assertGreater(b, a)
+        self.assertGreater(a, 0)
+
+    def test_penalty_is_smaller_when_battery_dominates(self):
+        # Same efficiency, more wheel power => the rider's share is a smaller
+        # fraction, so the battery penalty shrinks. This is the mechanism behind
+        # Schaeffler's misleadingly small 5% claim.
+        low = model.battery_penalty_pct(100, 0.75, 250)
+        high = model.battery_penalty_pct(100, 0.75, 600)
+        self.assertLess(high, low)
+
+    def test_invert_recovers_target(self):
+        for rider, wheel in ((60, 250), (100, 400), (150, 250)):
+            eta = model.invert_battery_penalty(rider, wheel, 5.0)
+            self.assertAlmostEqual(model.battery_penalty_pct(rider, eta, wheel),
+                                   5.0, delta=0.05)
+
+    def test_invert_lands_in_published_band(self):
+        # The claim maps to a wide, low-information band -- not to ~91%.
+        etas = [model.invert_battery_penalty(r, w, 5.0)
+                for r in (60, 100, 150) for w in (250, 400)]
+        self.assertGreater(min(etas), 0.60)
+        self.assertLess(max(etas), 0.96)
+        # Spread across the band must be large enough to be uninformative.
+        self.assertGreater(max(etas) - min(etas), 0.15)
+
+    def test_vendor_figures_are_in_data(self):
+        for cid in ("cixi_pers_standalone", "schaeffler_freedrive_generator"):
+            item = model.by_id(self.comp, "generators", cid)
+            self.assertGreaterEqual(item["efficiency"], 0.80)
+            self.assertLess(item["efficiency"], 0.90)
+
+    def test_tournon_prototype_is_pessimistic(self):
+        proto = model.by_id(self.comp, "generators", "tournon_measured_prototype")
+        best, _ = model.serial_efficiency(self.comp)
+        self.assertLess(proto["efficiency"], best)
+
+
 if __name__ == "__main__":
     unittest.main()

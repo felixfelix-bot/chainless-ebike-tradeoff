@@ -5,6 +5,34 @@
   },
   "generators": [
     {
+      "id": "schaeffler_freedrive_generator",
+      "label": "Schaeffler/Heinzmann Free Drive pedal alternator (1:29 cyclone gearbox)",
+      "efficiency": 0.86,
+      "range": [0.80, 0.88],
+      "kind": "literature",
+      "source": "Schaeffler states Free Drive is 'approximately 5% less efficient than chain drives' (to Electrek, 2021-08-31). Back-solving that at typical assist levels gives 81-89% system efficiency; the component-level figure is not published. Heinzmann brochure ED_FDS_001_21_08_e confirms a 1:29 cyclone gearbox, 250 W continuous, 1200 W peak.",
+      "note": "The 5% figure is a system claim about battery range, not a drivetrain efficiency measurement -- see docs/crank-alternator-efficiency.md for why the two differ. No manufacturer publishes a generator efficiency curve."
+    },
+    {
+      "id": "cixi_pers_standalone",
+      "label": "CIXI PERS Standalone pedal generator (cargo/urban)",
+      "efficiency": 0.80,
+      "range": [0.80, 0.85],
+      "kind": "datasheet",
+      "source": "CIXI PERS KIT Catalog 2026, PERS Standalone spec table: 'Efficiency higher than 80%', 360 W continuous, 2000 W peak, 185 Nm, 100 rpm, 48 V.",
+      "note": "The only manufacturer in this survey publishing a generator efficiency number at all. Note it is a '>' bound, not a curve."
+    },
+    {
+      "id": "tournon_measured_prototype",
+      "label": "Tournon series-hybrid bicycle prototype, simulated efficiency",
+      "efficiency": 0.36,
+      "range": [0.36, 0.36],
+      "kind": "literature",
+      "source": "Tournon (2020), doctoral thesis, Universite de Lyon / ESTACA, 'Conception optimale d'un velo a architecture hybride serie et a base de supercondensateurs'. A prototype built mostly from off-the-shelf parts simulated at 36% on a hilly route; the best optimised design reached 73% on the flat without stops, and 62% with a 50 m climb.",
+      "kind_extra": "measured on a real build, but the figure is a simulation of that build",
+      "note": "The most directly relevant data point in existence: a real series-hybrid bike, built and simulated by the person who did the sizing theory."
+    },
+    {
       "id": "car_alternator_peak",
       "label": "Car alternator, peak (near 2/3 of rated load, 2000-6000 rpm)",
       "efficiency": 0.55,

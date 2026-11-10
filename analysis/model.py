@@ -320,6 +320,78 @@ def section_tradeoff(comp: dict) -> None:
     print()
 
 
+def battery_penalty_pct(rider_w: float, serial_eta: float, wheel_w: float,
+                        chain_eta: float = 0.97, motor_eta: float = 0.88) -> float:
+    """Extra battery draw (%) of a serial drive vs a chain, at equal wheel power.
+
+    The point of this function: Schaeffler's "5% bigger battery" claim is about
+    battery draw on an assisted bike, NOT about drivetrain efficiency. Because
+    most wheel power comes from the battery, only the rider's share passes
+    through the lossy conversion, so a large efficiency deficit produces a
+    small battery penalty.
+    """
+    draw_chain = max(0.0, wheel_w - rider_w * chain_eta) / motor_eta
+    draw_serial = max(0.0, wheel_w - rider_w * serial_eta) / motor_eta
+    if draw_chain <= 0:
+        return float("nan")
+    return (draw_serial - draw_chain) / draw_chain * 100.0
+
+
+def invert_battery_penalty(rider_w: float, wheel_w: float, target_pct: float = 5.0,
+                           chain_eta: float = 0.97) -> float:
+    """Serial-path efficiency that yields exactly `target_pct` extra battery draw."""
+    lo, hi = 0.30, 1.0
+    for _ in range(100):
+        mid = (lo + hi) / 2.0
+        if battery_penalty_pct(rider_w, mid, wheel_w, chain_eta) > target_pct:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0
+
+
+def section_crank(comp: dict) -> None:
+    print("## 7. Crank alternator efficiency: what the shipped systems achieve\n")
+    print("Manufacturer and literature figures for pedal generators:\n")
+    rows = []
+    for cid in ("cixi_pers_standalone", "schaeffler_freedrive_generator",
+                "tournon_measured_prototype", "car_alternator_peak",
+                "bike_hub_dynamo"):
+        item = by_id(comp, "generators", cid)
+        lo, hi = item["range"]
+        shown = f"{lo*100:.0f}%" if lo == hi else f"{lo*100:.0f}-{hi*100:.0f}%"
+        rows.append([item["label"][:52], shown, item["kind"]])
+    print(fmt_table(["System", "Efficiency", "Provenance"], rows))
+    print()
+
+    print("What Schaeffler's 'about 5% less efficient than a chain' actually implies.")
+    print("The 5% is extra battery draw, not drivetrain efficiency:\n")
+    rows = []
+    for rider in (60, 100, 150):
+        for wheel in (250, 400):
+            rows.append([f"{rider}", f"{wheel}",
+                         f"{invert_battery_penalty(rider, wheel)*100:.1f}%"])
+    print(fmt_table(["Rider W", "Wheel W", "Serial eta implied"], rows))
+    print()
+    print("So the claim is consistent with anything from ~68% to ~94%. It is true,")
+    print("carefully worded, and almost uninformative.")
+    print()
+
+    print("The same efficiency deficit, expressed as what the rider feels:\n")
+    rows = []
+    for eff in (0.36, 0.62, 0.70, 0.73, 0.86, 0.91):
+        slower = (1 - (eff / 0.97) ** (1.0 / 3.0)) * 100
+        rows.append([f"{eff*100:.0f}%", f"{slower:.1f}%",
+                     f"{battery_penalty_pct(150, eff, 400):.1f}%",
+                     f"{battery_penalty_pct(100, eff, 250):.1f}%"])
+    print(fmt_table(["Serial eta", "Slower (flat, 1/3-power law)",
+                     "Extra battery @150W/400W", "Extra battery @100W/250W"], rows))
+    print()
+    print("Note the asymmetry: a 30% drivetrain deficit is a 10-15% speed deficit but")
+    print("only a ~10% battery penalty. That is why makers quote battery range.")
+    print()
+
+
 def section_bootstrap(comp: dict) -> None:
     print("## 5. Cold start: can a caps-only bike generate at all?\n")
     alt = by_id(comp, "generators", "car_alternator_peak")
@@ -349,6 +421,7 @@ SECTIONS = {
     "tradeoff": section_tradeoff,
     "bootstrap": section_bootstrap,
     "cadence": section_cadence,
+    "crank": section_crank,
 }
 
 
