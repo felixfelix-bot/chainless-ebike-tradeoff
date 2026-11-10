@@ -1,0 +1,164 @@
+{
+  "_meta": {
+    "note": "Component efficiencies and masses used by the model. Every entry carries a `kind` field: 'literature' or 'datasheet' means the figure is quoted from the named source; 'estimate' means it is an engineering judgement and should be treated as uncertain. Prices are street prices observed in November 2026 and will drift.",
+    "observed": "2026-11"
+  },
+  "generators": [
+    {
+      "id": "car_alternator_peak",
+      "label": "Car alternator, peak (near 2/3 of rated load, 2000-6000 rpm)",
+      "efficiency": 0.55,
+      "range": [0.47, 0.65],
+      "kind": "literature",
+      "source": "SAE 2012-01-1058 puts automotive alternator peak conversion at ~47%; trade sources quote 55-60% typical, 68-75% for high-efficiency units.",
+      "note": "Requires roughly 30:1 step-up from an 80 rpm cadence to reach its efficient shaft-speed band."
+    },
+    {
+      "id": "car_alternator_partload",
+      "label": "Car alternator at ~15% of rated load (150-250 W from a 1.4 kW machine)",
+      "efficiency": 0.38,
+      "range": [0.30, 0.45],
+      "kind": "estimate",
+      "source": "Derived: fixed iron, windage and field-excitation losses dominate at low load. Alternators are optimised for high load; part-load efficiency falls steeply.",
+      "note": "Also wound-field, so it needs field current and a voltage reference to produce output at all."
+    },
+    {
+      "id": "bike_hub_dynamo",
+      "label": "Bicycle hub dynamo (Schmidt SON 28 class)",
+      "efficiency": 0.52,
+      "range": [0.45, 0.65],
+      "kind": "literature",
+      "source": "Cyclingabout dynamo drag testing: SON 28 ~0.25-1.25 W drag for ~3 W electrical output in the 10-30 km/h band.",
+      "note": "Efficiency falls further below ~15 km/h. Best-in-class, and nowhere near 90%."
+    },
+    {
+      "id": "hub_motor_as_pmg",
+      "label": "Direct-drive hub motor used as a PMG (belt-driven from cranks)",
+      "efficiency": 0.86,
+      "range": [0.82, 0.89],
+      "kind": "estimate",
+      "source": "DD hub motors peak around 85-90% in their designed speed/torque region; a 3:1 belt step-up lets it sit there.",
+      "note": "Attractive because the controller already knows how to run it in regen mode."
+    },
+    {
+      "id": "axial_flux_pmg",
+      "label": "Purpose-built axial-flux PMG at design point",
+      "efficiency": 0.88,
+      "range": [0.85, 0.91],
+      "kind": "estimate",
+      "source": "Typical small axial-flux PM machine efficiency at rated load; falls off outside the design speed.",
+      "note": "No field winding, so it self-excites: no bootstrap problem."
+    }
+  ],
+  "electronics": [
+    {
+      "id": "rectifier_3ph",
+      "label": "3-phase rectifier (synchronous or schottky)",
+      "efficiency": 0.98,
+      "range": [0.96, 0.99],
+      "kind": "estimate",
+      "source": "Diode bridge at these currents; synchronous rectification does better."
+    },
+    {
+      "id": "dc_bus",
+      "label": "DC bus / DC-DC conversion stage",
+      "efficiency": 0.97,
+      "range": [0.95, 0.98],
+      "kind": "estimate",
+      "source": "A cap bank's 2:1 voltage swing forces either a wide-input controller or this stage."
+    },
+    {
+      "id": "motor_controller",
+      "label": "Motor controller (FOC, part load)",
+      "efficiency": 0.96,
+      "range": [0.94, 0.98],
+      "kind": "estimate",
+      "source": "Typical FOC controller; part-load and low-speed operation is worse than the headline figure."
+    },
+    {
+      "id": "battery_roundtrip",
+      "label": "LiFePO4 charge/discharge round trip",
+      "efficiency": 0.95,
+      "range": [0.92, 0.97],
+      "kind": "estimate",
+      "source": "Cell plus BMS round-trip at modest C-rate. Only applies to builds that route pedal power through the pack; a direct-bus build bypasses it."
+    }
+  ],
+  "motors": [
+    {
+      "id": "hub_motor_partload",
+      "label": "Hub motor driving the wheel at ~200 W",
+      "efficiency": 0.88,
+      "range": [0.85, 0.90],
+      "kind": "estimate",
+      "source": "DD hub motors are quoted 85-90% peak; at 200 W in a 250-500 W motor you are at part load.",
+      "note": "This 90% figure in the original premise is the one part of it that holds up."
+    }
+  ],
+  "mechanical": [
+    {
+      "id": "chain_per_stage",
+      "label": "Chain/belt stage (derailleur or IGH drivetrain)",
+      "efficiency": 0.98,
+      "range": [0.95, 0.99],
+      "kind": "literature",
+      "source": "Well-established: chain drives run 95-99% per stage; a clean derailleur drivetrain is at the top of that band.",
+      "note": "This is the thing being replaced."
+    }
+  ],
+  "storage": [
+    {
+      "id": "maxwell_48v_165f",
+      "label": "Maxwell BMOD0165 P048 supercapacitor module",
+      "energy_wh": 53.0,
+      "mass_kg": 14.2,
+      "price_eur": 1785.0,
+      "voltage_nominal": 48.0,
+      "capacitance_f": 165.0,
+      "kind": "datasheet",
+      "source": "EVEA (FR) listing: MAXWELL 48V 165F module, 14.2 kg, 1785.37 EUR ex-VAT. Datasheet energy 53 Wh.",
+      "note": "Retail modules carry a large markup over bare cells."
+    },
+    {
+      "id": "maxwell_16v_500f",
+      "label": "16 V 500 F ultracapacitor module (6 x 3000 F cells)",
+      "energy_wh": 17.8,
+      "mass_kg": 1.4,
+      "price_usd": 280.0,
+      "voltage_nominal": 16.0,
+      "capacitance_f": 500.0,
+      "kind": "datasheet",
+      "source": "DigiKey SM0500-016-PT-1 datasheet: 17.8 Wh, 3.1 Wh/kg cell-level, 2.1 mOhm ESR. Price from LiFoo listing.",
+      "note": "Mass estimated from the 3.1 Wh/kg cell-level figure."
+    },
+    {
+      "id": "maxwell_3000f_cell",
+      "label": "Maxwell BCAP3000 3000 F 2.7 V cell",
+      "energy_wh": 3.04,
+      "mass_kg": 0.51,
+      "price_usd": 40.0,
+      "voltage_nominal": 2.7,
+      "capacitance_f": 3000.0,
+      "kind": "datasheet",
+      "source": "0.5*C*V^2 = 10,935 J = 3.04 Wh. Street price observed 40-106 USD/cell depending on source.",
+      "note": "18 in series gives 48.6 V / 166.7 F / 53 Wh. Needs balancing."
+    },
+    {
+      "id": "lifepo4_48v_20ah",
+      "label": "48 V 20 Ah LiFePO4 ebike pack",
+      "energy_wh": 960.0,
+      "mass_kg": 5.4,
+      "price_usd": 190.0,
+      "voltage_nominal": 48.0,
+      "kind": "datasheet",
+      "source": "BtrPower 48V 20Ah LiFePO4: 5.4 kg, 189.99 USD. Cycle life 3000-5000 cycles to 80%.",
+      "note": "The comparison point for cost and mass."
+    }
+  ],
+  "vehicle": {
+    "mass_kg": 100.0,
+    "mass_note": "Rider (~78 kg) + bike + kit. Change it in the model; it scales linearly.",
+    "crr": 0.006,
+    "crr_note": "Typical for good tyres on asphalt."
+  }
+}

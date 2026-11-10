@@ -1,0 +1,123 @@
+Chainless bicycle drivetrain: design tradeoff model
+============================================================
+
+## 1. Drivetrain efficiency at 200 W rider input
+
+| Path            | Efficiency | At wheel | Lost |
+|-----------------|------------|----------|------|
+| Chain, 2 stages | 96.0%      | 192 W    | 8 W  |
+| Chain, 3 stages | 94.1%      | 188 W    | 12 W |
+
+Serial electric path, same 200 W (generator -> rectifier -> bus -> controller -> hub):
+
+| Generator                       | Efficiency | At wheel | Lost  |
+|---------------------------------|------------|----------|-------|
+| Car alternator, peak + hub      | 44.2%      | 88 W     | 112 W |
+| Car alternator, part load + hub | 30.5%      | 61 W     | 139 W |
+| Bicycle hub dynamo + hub        | 41.8%      | 84 W     | 116 W |
+| Hub motor as PMG + hub          | 69.1%      | 138 W    | 62 W  |
+| Axial-flux PMG + hub            | 70.7%      | 141 W    | 59 W  |
+
+Two ways to build the serial path, with the same good components:
+
+| Topology            | Efficiency | At wheel | Lost |
+|---------------------|------------|----------|------|
+| Direct to motor bus | 70.7%      | 141 W    | 59 W |
+| Through the battery | 69.2%      | 138 W    | 62 W |
+
+The through-battery topology is what Mando and Schaeffler actually shipped, and it
+is the worse one for efficiency. Feeding the motor bus directly avoids the
+round-trip penalty but needs the generator, bus and motor voltages to track.
+
+Best-case serial path, stage by stage (70.7% total):
+
+| Stage                                        | Stage eta | Cumulative |
+|----------------------------------------------|-----------|------------|
+| Purpose-built axial-flux PMG at design point | 88%       | 88.0%      |
+| 3-phase rectifier (synchronous or schottky)  | 98%       | 86.2%      |
+| DC bus / DC-DC conversion stage              | 97%       | 83.7%      |
+| Motor controller (FOC, part load)            | 96%       | 80.3%      |
+| Hub motor driving the wheel at ~200 W        | 88%       | 70.7%      |
+
+Break-even: to match a 2-stage chain (96.0%), the generator plus the
+electronics downstream of it must reach 119.6% combined.
+Serial drive at best case leaves the rider effectively 1.36x weaker.
+
+## 2. Regenerative braking: how much is actually there
+
+Vehicle mass 100 kg (rider + bike + kit).
+
+| km/h | KE (J) | KE (Wh) | Recovered (Wh) |
+|------|--------|---------|----------------|
+| 10   | 386    | 0.107   | 0.091          |
+| 15   | 868    | 0.241   | 0.204          |
+| 18   | 1250   | 0.347   | 0.293          |
+| 20   | 1543   | 0.429   | 0.362          |
+| 25   | 2411   | 0.670   | 0.566          |
+| 30   | 3472   | 0.965   | 0.815          |
+
+One stop from 20 km/h returns 0.36 Wh, which is 0.038% of a 960 Wh pack.
+That is 2.8 stops per Wh. At 15 Wh/km, one kilometre of range costs 41 stops.
+
+A 300 m descent instead yields 82 Wh at the wheel before conversion losses -- two orders of magnitude more than a stop.
+Regen is a hill and brake-wear feature, not a traffic-light feature.
+
+## 3. Supercapacitors vs batteries, on the market
+
+| Storage                                             | Wh  | kg   | Wh/kg | Price    | Price/Wh |
+|-----------------------------------------------------|-----|------|-------|----------|----------|
+| Maxwell BMOD0165 P048 supercapacitor module         | 53  | 14.2 | 3.7   | 1785 EUR | 33.68    |
+| 16 V 500 F ultracapacitor module (6 x 3000 F cells) | 18  | 1.4  | 12.7  | 280 USD  | 15.73    |
+| Maxwell BCAP3000 3000 F 2.7 V cell                  | 3   | 0.5  | 6.0   | 40 USD   | 13.16    |
+| 48 V 20 Ah LiFePO4 ebike pack                       | 960 | 5.4  | 177.8 | 190 USD  | 0.20     |
+
+Module-level comparisons: caps are 48x heavier per Wh and cost 170x more per Wh than LiFePO4.
+Bare cells close some of the cost gap but none of the mass gap.
+
+### Sizing a cap bank for a given buffer
+
+| Usable Wh | Voltage window | Capacitance (F) |
+|-----------|----------------|-----------------|
+| 5         | 48->36         | 36              |
+| 10        | 48->36         | 71              |
+| 10        | 48->24         | 42              |
+| 20        | 52->26         | 71              |
+
+Note the voltage swing: a cap bank empties as a square law, so half the energy
+sits below 70% of full voltage. A battery holds a flat bus; caps need a
+wide-input controller or another conversion stage.
+
+## 4. Mass sensitivity: what a heavy kit costs on grades
+
+At 18 km/h, climbing power for the whole vehicle vs. just the 12 kg of kit:
+
+| Grade | Total @ 100 kg | 12 kg of kit |
+|-------|----------------|--------------|
+| 0.5%  | 25 W           | 3 W          |
+| 1.0%  | 49 W           | 6 W          |
+| 3.0%  | 147 W          | 18 W         |
+| 6.0%  | 294 W          | 35 W         |
+
+On the flat at 18 km/h, 12 kg of kit costs 4 W of rolling resistance
+out of 29 W total. Gradients are where mass actually bites: 12 kg is a
+12% increase in the mass hauled up every hill.
+
+## 5. Cold start: can a caps-only bike generate at all?
+
+- Car alternator, peak (near 2/3 of rated load, 2000-6000 rpm): wound field. Requires roughly 30:1 step-up from an 80 rpm cadence to reach its efficient shaft-speed band.
+- Purpose-built axial-flux PMG at design point: permanent magnet, self-exciting. Turns, volt appears.
+
+So a caps-only build is electrically possible with a PM machine, and
+impossible-in-practice with a car alternator. Either way you still want a
+small keep-alive cell for logic and pre-charge state on power-up.
+
+## 6. Why decoupling cadence from wheel speed buys less than expected
+
+Human gross efficiency varies only a few percent across 60-100 rpm, and riders
+already self-select near their optimum. A derailleur offers 500-600% of torque
+multiplication at ~97%. Decoupling is a real benefit for packaging and comfort;
+it is not where the drivetrain efficiency argument is won.
+
+---
+All component figures and their provenance: data/components.json
+Figures tagged 'estimate' are engineering judgement, not measurement.
